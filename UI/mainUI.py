@@ -23,7 +23,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.setupUi(self)
         self.getRandomWord()
         self.updateRandomWord()
-        self.setStyleSheet("background-color:#91CB3E")
+        self.setStyleSheet("background-color:#E8B4BC")
         
         self.connection_thread = connectCheck_Thread(self)
         self.connectionTimer = QTimer(self,timeout=self.connectionCheck).start(1000)
