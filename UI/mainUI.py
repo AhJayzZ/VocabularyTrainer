@@ -7,6 +7,7 @@ from .Ui_init import *
 
 from bs4 import BeautifulSoup
 from googletrans import Translator
+import text_to_speech
 import requests
 import random
 import sys
@@ -24,13 +25,19 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.getRandomWord()
         self.updateRandomWord()
         self.setWindowIcon(QIcon('UI/images/window_icon.png'))
+        self.soundButton.setIcon(QIcon('UI/images/sound_icon.png'))
+        self.generateButton.setIcon(QIcon('UI/images/generate_icon.png'))
+        self.addButton.setIcon(QIcon('UI/images/add_icon.png'))
+        self.removeButton.setIcon(QIcon('UI/images/remove_icon.png'))
+        self.exitButton.setIcon(QIcon('UI/images/exit_icon.png'))
         
         self.connection_thread = connectCheck_Thread(self)
         self.connectionTimer = QTimer(self,timeout=self.connectionCheck).start(1000)
 
         self.addButton.clicked.connect(self.addRandomWord)
-        self.nextButton.clicked.connect(self.updateRandomWord)
+        self.generateButton.clicked.connect(self.updateRandomWord)
         self.removeButton.clicked.connect(self.removeRandomWord)
+        self.soundButton.clicked.connect(self.playSound)
         self.exitButton.clicked.connect(sys.exit)
 
     def connectionCheck(self):
@@ -54,19 +61,21 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         update wordLabel
         """
         self.randomWord = self.getRandomWord()
+        self.gTTS_thread = gTTS_Thread(self.randomWord)
+        self.gTTS_thread.start()
         self.webCrawler_thread = webCrawler(self.randomWord)
         self.webCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
         self.webCrawler_thread.start()
-        
-        self.nextButton.setEnabled(False)   # Avoid too fast refresh
+
+        self.generateButton.setEnabled(False)   # Avoid too fast refresh
         self.wordLabel.setText(self.randomWord)
 
     def updateRandomWordInfo(self):
         """
         update wordInfoLabel and wordSentenceLabel
         """
-        self.nextButton.setEnabled(True)
-        self.nextButton.setDefault(True)
+        self.generateButton.setEnabled(True)
+        self.generateButton.setDefault(True)
         # Word
         if self.webCrawler_thread.wordInfo:
             self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
@@ -80,7 +89,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         else:
             self.wordSentenceLabel.setText('Found nothing sentence...')
         
-
     def addRandomWord(self):
         """
         add word to recordList
@@ -96,6 +104,13 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         for item in selectedItems:
             itemIndex = self.recordList.row(item)
             self.recordList.takeItem(itemIndex)
+
+    def playSound(self):
+        """
+        play random word mp3 file
+        """
+        self.gTTS_thread = gTTS_Thread(self.randomWord)
+        self.gTTS_thread.start()
 
 # ------------------------------------- Threading -------------------------------------
 class webCrawler(QThread):
@@ -138,9 +153,23 @@ class webCrawler(QThread):
         sentenceArray = []
         for index in range(len(sentences)):
             if chineseSentences[index].text:
-                sentenceArray.append(sentences[index].text + '\n' + chineseSentences[index].text)
+                sentenceArray.append("{}.{}{}{}".format(str(index),
+                                                        sentences[index].text,
+                                                        '\n',
+                                                        chineseSentences[index].text))
             if index >= 5 : break # limit output sentence
         return '\n'.join(sentenceArray)
+
+class gTTS_Thread(QThread):
+    """
+    google Text To Speech threading
+    """
+    def __init__(self,word,parent=None):
+        super().__init__(parent)
+        self.word = word
+        
+    def run(self):
+        text_to_speech.TextToSpeech(self.word)
 
 class connectCheck_Thread(QThread):
     """
