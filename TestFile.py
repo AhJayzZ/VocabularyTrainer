@@ -1,24 +1,19 @@
 from bs4 import BeautifulSoup
 import requests
 
-mystr = "asshole"
-url = "https://www.bing.com/dict/search?q={}".format(mystr)
-myheader = {
-    'cookie':'_EDGE_S=F&mkt=zh-cn' # this is key header
+mystr = "bad"
+url = "http://www.iciba.com/word?w={}".format(mystr)
+header ={
+    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',
 }
 
-text = requests.get(url=url,headers=myheader).text
+text = requests.get(url=url,headers=header).text
 soup = BeautifulSoup(text,'html.parser')
 
-# part of speech(詞性),definitions(定義)
-pos = soup.find_all('span',class_='pos')
-definitions = soup.find_all('span',class_='def b_regtxt')
-infoArray = []
+sentences = soup.find_all('p',class_='NormalSentence_en__3Ey8P')
+chineseSentences = soup.find_all('p',class_='NormalSentence_cn__27VpO')
 
-for index in range(max(len(pos),len(definitions))):
-    infoArray.append("{}.(詞性:{}) {}".format(str(index+1),
-                                           pos[index].text, 
-                                           definitions[index].text))
-
-wordInfo = '\n'.join(infoArray)
-print(wordInfo)
+for index in range(len(sentences)):
+    if chineseSentences[index].text:
+        print(sentences[index].text)
+        print(chineseSentences[index].text)

@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>945</width>
-    <height>709</height>
+    <width>993</width>
+    <height>662</height>
    </rect>
   </property>
   <property name="font">
@@ -26,14 +26,14 @@
     <property name="geometry">
      <rect>
       <x>310</x>
-      <y>540</y>
-      <width>221</width>
+      <y>490</y>
+      <width>211</width>
       <height>42</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>20</pointsize>
+      <pointsize>15</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -46,14 +46,14 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>80</y>
-      <width>921</width>
-      <height>211</height>
+      <y>70</y>
+      <width>971</width>
+      <height>131</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>15</pointsize>
+      <pointsize>10</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -69,14 +69,14 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>290</y>
-      <width>921</width>
-      <height>101</height>
+      <y>210</y>
+      <width>961</width>
+      <height>171</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>15</pointsize>
+      <pointsize>10</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -99,7 +99,7 @@
     </property>
     <property name="font">
      <font>
-      <pointsize>30</pointsize>
+      <pointsize>20</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -112,9 +112,9 @@
     <property name="geometry">
      <rect>
       <x>10</x>
-      <y>430</y>
+      <y>390</y>
       <width>291</width>
-      <height>201</height>
+      <height>191</height>
      </rect>
     </property>
     <property name="font">
@@ -128,8 +128,8 @@
    <widget class="QLabel" name="connectionLabel">
     <property name="geometry">
      <rect>
-      <x>690</x>
-      <y>580</y>
+      <x>740</x>
+      <y>530</y>
       <width>241</width>
       <height>51</height>
      </rect>
@@ -149,14 +149,14 @@
     <property name="geometry">
      <rect>
       <x>310</x>
-      <y>490</y>
-      <width>221</width>
+      <y>440</y>
+      <width>211</width>
       <height>42</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>20</pointsize>
+      <pointsize>15</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -169,14 +169,14 @@
     <property name="geometry">
      <rect>
       <x>310</x>
-      <y>440</y>
-      <width>221</width>
+      <y>390</y>
+      <width>211</width>
       <height>42</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>20</pointsize>
+      <pointsize>15</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
@@ -195,20 +195,20 @@
     <property name="geometry">
      <rect>
       <x>310</x>
-      <y>590</y>
-      <width>221</width>
+      <y>540</y>
+      <width>211</width>
       <height>41</height>
      </rect>
     </property>
     <property name="font">
      <font>
-      <pointsize>20</pointsize>
+      <pointsize>15</pointsize>
       <weight>75</weight>
       <bold>true</bold>
      </font>
     </property>
     <property name="text">
-     <string>離開</string>
+     <string>離開程式</string>
     </property>
    </widget>
   </widget>
@@ -217,7 +217,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>945</width>
+     <width>993</width>
      <height>25</height>
     </rect>
    </property>

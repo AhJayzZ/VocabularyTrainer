@@ -6,8 +6,8 @@ from PyQt5.QtCore import *
 from .Ui_init import *
 
 from bs4 import BeautifulSoup
+from googletrans import Translator
 import requests
-import googletrans
 import random
 import sys
 
@@ -24,7 +24,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.getRandomWord()
         self.updateRandomWord()
         self.setWindowIcon(QIcon('UI/images/window_icon.png'))
-        self.setStyleSheet("background-color:#E8B4BC")
         
         self.connection_thread = connectCheck_Thread(self)
         self.connectionTimer = QTimer(self,timeout=self.connectionCheck).start(1000)
@@ -68,8 +67,19 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         self.nextButton.setEnabled(True)
         self.nextButton.setDefault(True)
-        self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
-        self.wordSentenceLabel.setText(self.webCrawler_thread.wordSentence)
+        # Word
+        if self.webCrawler_thread.wordInfo:
+            self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
+        else:
+            translator = Translator()
+            translation = translator.translate(self.randomWord, src='en', dest='zh-tw').text
+            self.wordInfoLabel.setText(translation)
+        # Sentence
+        if self.webCrawler_thread.wordSentence:
+             self.wordSentenceLabel.setText(self.webCrawler_thread.wordSentence)
+        else:
+            self.wordSentenceLabel.setText('Found nothing sentence...')
+        
 
     def addRandomWord(self):
         """
@@ -95,14 +105,19 @@ class webCrawler(QThread):
     finishSingal = pyqtSignal(int)
     def __init__(self,word):
         super().__init__(parent=None)
-        
         self.word = word
         self.url = "https://www.bing.com/dict/search?q={}".format(word)
         self.header = {'cookie':'_EDGE_S=F&mkt=zh-cn'} # this is key header
+        self.sentenceUrl = "http://www.iciba.com/word?w={}".format(word)
+        self.sentenceUrlHeader={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',}
     
     def run(self):
+        # Word
         self.htmlContent = requests.get(url=self.url,headers=self.header).text
         self.soup = BeautifulSoup(self.htmlContent,'html.parser')
+        # Sentence
+        self.sentenceHtmlContent =requests.get(url=self.sentenceUrl,headers=self.sentenceUrlHeader).text
+        self.sentenceSoup = BeautifulSoup(self.sentenceHtmlContent,'html.parser')
         self.wordInfo = self.getWordInfo()
         self.wordSentence = self.getWordSentence()
         self.finishSingal.emit(1)
@@ -118,7 +133,14 @@ class webCrawler(QThread):
         return '\n'.join(wordInfoArray)
 
     def getWordSentence(self):
-        return "unfinished"
+        sentences = self.sentenceSoup.find_all('p',class_='NormalSentence_en__3Ey8P')
+        chineseSentences = self.sentenceSoup.find_all('p',class_='NormalSentence_cn__27VpO')
+        sentenceArray = []
+        for index in range(len(sentences)):
+            if chineseSentences[index].text:
+                sentenceArray.append(sentences[index].text + '\n' + chineseSentences[index].text)
+            if index >= 5 : break # limit output sentence
+        return '\n'.join(sentenceArray)
 
 class connectCheck_Thread(QThread):
     """
