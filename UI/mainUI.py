@@ -1,4 +1,3 @@
-from datetime import time
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -10,7 +9,8 @@ from googletrans import Translator
 import text_to_speech
 import requests
 import random
-import sys
+import json
+import sys,os
 
 class VocabularyTrainer(QMainWindow,Ui_MainWindow):
     """
@@ -40,6 +40,8 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.soundButton.clicked.connect(self.playSound)
         self.exitButton.clicked.connect(sys.exit)
 
+        
+
     def connectionCheck(self):
         """
         Check network connection
@@ -66,14 +68,18 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.webCrawler_thread = webCrawler(self.randomWord)
         self.webCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
         self.webCrawler_thread.start()
-
-        self.generateButton.setEnabled(False)   # Avoid too fast refresh
         self.wordLabel.setText(self.randomWord)
+
+        # Avoid too fast refresh
+        self.generateButton.setEnabled(False)   
+        self.addButton.setEnabled(False)
+
 
     def updateRandomWordInfo(self):
         """
         update wordInfoLabel and wordSentenceLabel
         """
+        self.addButton.setEnabled(True)
         self.generateButton.setEnabled(True)
         self.generateButton.setDefault(True)
         # Word
@@ -87,6 +93,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         if self.webCrawler_thread.wordSentence:
              self.wordSentenceLabel.setText(self.webCrawler_thread.wordSentence)
         else:
+            self.webCrawler_thread.wordSentence = 'Found nothing sentence...'
             self.wordSentenceLabel.setText('Found nothing sentence...')
         
     def addRandomWord(self):
@@ -94,6 +101,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         add word to recordList
         """
         self.recordList.addItem(self.randomWord)
+        self.loadRecord()
 
     def removeRandomWord(self):
         """
@@ -111,6 +119,22 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         self.gTTS_thread = gTTS_Thread(self.randomWord)
         self.gTTS_thread.start()
+
+    def loadRecord(self):
+        """
+        load local word record data
+        """
+        wordFormat = {"word": self.randomWord ,"info":self.webCrawler_thread.wordInfo ,"sentences": self.webCrawler_thread.wordSentence}
+        wordJsonFormat = json.dumps(wordFormat,ensure_ascii=False)
+        currentPath = os.path.dirname(__file__) # GUI
+        dirPath = os.path.split(currentPath)[0] # ../ => project_code
+        filePath = os.path.join(dirPath,'localRecord.json')
+        if not os.path.exists(filePath):
+            open(filePath,'w',encoding='utf-8')
+        file = open(filePath,'a',encoding='utf-8')
+        json.dump(wordJsonFormat,file)
+        file.write(',\n')
+        file.close()
 
 # ------------------------------------- Threading -------------------------------------
 class webCrawler(QThread):
@@ -153,7 +177,7 @@ class webCrawler(QThread):
         sentenceArray = []
         for index in range(len(sentences)):
             if chineseSentences[index].text:
-                sentenceArray.append("{}.{}{}{}".format(str(index),
+                sentenceArray.append("{}.{}{}{}".format(str(index+1),
                                                         sentences[index].text,
                                                         '\n',
                                                         chineseSentences[index].text))

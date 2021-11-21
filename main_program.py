@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import *
 from UI.Ui_init import *
-import sys,socket
+import sys
 from UI.mainUI import *
 
 
