@@ -3,7 +3,6 @@ from UI.Ui_init import *
 import sys
 from UI.mainUI import *
 
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = VocabularyTrainer()

@@ -1,3 +1,4 @@
+from ntpath import join
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -119,8 +120,17 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         selectedItems = self.recordList.selectedItems()
         if not selectedItems: return
         for item in selectedItems:
+            print(item.text())
             itemIndex = self.recordList.row(item)
             self.recordList.takeItem(itemIndex)
+
+            with open(self.filePath,'r',encoding='utf-8') as file:
+                fileContent = json.load(file)
+            with open(self.filePath,'w',encoding='utf-8') as file:
+                if item.text() in fileContent[itemIndex].values():
+                    del fileContent[itemIndex]
+                json.dump(fileContent,file,ensure_ascii=False)
+            file.close()
 
     def playSound(self):
         """
@@ -129,32 +139,33 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.gTTS_thread = gTTS_Thread(self.randomWord)
         self.gTTS_thread.start()
 
-    def addRecord(self): 
-        """
-        load local word record data
-        """
-        if not os.path.exists(self.filePath):
-            open(self.filePath,'w')
-
-        #wordFormat = {"word": self.randomWord ,"info":self.webCrawler_thread.wordInfo ,"sentences": self.webCrawler_thread.wordSentence}
-        #wordJsonFormat = json.dumps(wordFormat,ensure_ascii=False)
-        #wordJsonFormat = json.loads(wordJsonFormat)
-        wordDict = {}
-        wordDict["word"] = self.randomWord
-        wordDict["info"] = self.webCrawler_thread.wordInfo
-        wordDict["sentences"] = self.webCrawler_thread.wordSentence
-        with open(self.filePath,'a',encoding='utf-8') as file:
-            file.seek(1)
-            json.dump(wordDict,file,ensure_ascii=False)
-            file.write(',\n')
-            file.close()
-    
     def loadRecord(self):
-        return
+        """
+        load local record 
+        """
         with open(self.filePath,'r',encoding='utf-8') as file:
             fileData = json.load(file)
             for index in range(len(fileData)):
                 self.recordList.addItem(fileData[index]['word'])
+
+    def addRecord(self): 
+        """
+        add word dictionary to local record
+        """
+        if not os.path.exists(self.filePath):
+            open(self.filePath,'w')
+
+        wordDict = {"word":self.randomWord,
+                    "info":self.webCrawler_thread.wordInfo,
+                    "sentences":self.webCrawler_thread.wordSentence}
+        with open(self.filePath,'r+',encoding='utf-8') as file:
+            fileContent = json.load(file)
+            fileContent.append(wordDict)
+            file.seek(0)
+            json.dump(fileContent,file,ensure_ascii=False)
+            file.close()
+        
+
   
 # ------------------------------------- Threading -------------------------------------
 class webCrawler(QThread):
