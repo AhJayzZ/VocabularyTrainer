@@ -12,6 +12,10 @@ import random
 import json
 import sys,os
 
+
+
+
+
 class VocabularyTrainer(QMainWindow,Ui_MainWindow):
     """
     Vocabulary Trainer main window
@@ -21,9 +25,16 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         Initalizing all setting
         """
         super(VocabularyTrainer,self).__init__()
+
+        # unfinished
+        self.currentPath = os.path.dirname(__file__) # GUI
+        self.dirPath = os.path.split(self.currentPath)[0] # ../ => project_code
+        self.filePath = os.path.join(self.dirPath,'localRecord.json')
+
         self.setupUi(self)
         self.getRandomWord()
         self.updateRandomWord()
+        self.loadRecord()
         self.setWindowIcon(QIcon('UI/images/window_icon.png'))
         self.soundButton.setIcon(QIcon('UI/images/sound_icon.png'))
         self.generateButton.setIcon(QIcon('UI/images/generate_icon.png'))
@@ -39,8 +50,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.removeButton.clicked.connect(self.removeRandomWord)
         self.soundButton.clicked.connect(self.playSound)
         self.exitButton.clicked.connect(sys.exit)
-
-        
 
     def connectionCheck(self):
         """
@@ -101,7 +110,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         add word to recordList
         """
         self.recordList.addItem(self.randomWord)
-        self.loadRecord()
+        self.addRecord()
 
     def removeRandomWord(self):
         """
@@ -120,22 +129,33 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.gTTS_thread = gTTS_Thread(self.randomWord)
         self.gTTS_thread.start()
 
-    def loadRecord(self):
+    def addRecord(self): 
         """
         load local word record data
         """
-        wordFormat = {"word": self.randomWord ,"info":self.webCrawler_thread.wordInfo ,"sentences": self.webCrawler_thread.wordSentence}
-        wordJsonFormat = json.dumps(wordFormat,ensure_ascii=False)
-        currentPath = os.path.dirname(__file__) # GUI
-        dirPath = os.path.split(currentPath)[0] # ../ => project_code
-        filePath = os.path.join(dirPath,'localRecord.json')
-        if not os.path.exists(filePath):
-            open(filePath,'w',encoding='utf-8')
-        file = open(filePath,'a',encoding='utf-8')
-        json.dump(wordJsonFormat,file)
-        file.write(',\n')
-        file.close()
+        if not os.path.exists(self.filePath):
+            open(self.filePath,'w')
 
+        #wordFormat = {"word": self.randomWord ,"info":self.webCrawler_thread.wordInfo ,"sentences": self.webCrawler_thread.wordSentence}
+        #wordJsonFormat = json.dumps(wordFormat,ensure_ascii=False)
+        #wordJsonFormat = json.loads(wordJsonFormat)
+        wordDict = {}
+        wordDict["word"] = self.randomWord
+        wordDict["info"] = self.webCrawler_thread.wordInfo
+        wordDict["sentences"] = self.webCrawler_thread.wordSentence
+        with open(self.filePath,'a',encoding='utf-8') as file:
+            file.seek(1)
+            json.dump(wordDict,file,ensure_ascii=False)
+            file.write(',\n')
+            file.close()
+    
+    def loadRecord(self):
+        return
+        with open(self.filePath,'r',encoding='utf-8') as file:
+            fileData = json.load(file)
+            for index in range(len(fileData)):
+                self.recordList.addItem(fileData[index]['word'])
+  
 # ------------------------------------- Threading -------------------------------------
 class webCrawler(QThread):
     """

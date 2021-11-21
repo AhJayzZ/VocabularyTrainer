@@ -19,14 +19,10 @@ import json,os
 #         print(sentences[index].text)
 #         print(chineseSentences[index].text)
 
-a = "测试"
-b = '\u8a5e'
-#print(a.encode())
-print(b)
 
+a = '測'
 
-
-
+print(a.encode('utf-8').decode())
 
 
 
