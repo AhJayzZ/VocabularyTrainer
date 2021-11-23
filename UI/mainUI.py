@@ -13,10 +13,6 @@ import random
 import json
 import sys,os
 
-
-
-
-
 class VocabularyTrainer(QMainWindow,Ui_MainWindow):
     """
     Vocabulary Trainer main window
@@ -36,6 +32,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.getRandomWord()
         self.updateRandomWord()
         self.loadRecord()
+        self.setStyleSheet("background-color:#ABC4A1")
         self.setWindowIcon(QIcon('UI/images/window_icon.png'))
         self.soundButton.setIcon(QIcon('UI/images/sound_icon.png'))
         self.generateButton.setIcon(QIcon('UI/images/generate_icon.png'))
@@ -51,6 +48,8 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.removeButton.clicked.connect(self.removeRandomWord)
         self.soundButton.clicked.connect(self.playSound)
         self.exitButton.clicked.connect(sys.exit)
+
+        self.recordList.itemSelectionChanged.connect(self.setRecord)
 
     def connectionCheck(self):
         """
@@ -83,6 +82,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         # Avoid too fast refresh
         self.generateButton.setEnabled(False)   
         self.addButton.setEnabled(False)
+        self.removeButton.setEnabled(False)
 
 
     def updateRandomWordInfo(self):
@@ -90,15 +90,14 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         update wordInfoLabel and wordSentenceLabel
         """
         self.addButton.setEnabled(True)
+        self.removeButton.setEnabled(True)
         self.generateButton.setEnabled(True)
         self.generateButton.setDefault(True)
         # Word
-        if self.webCrawler_thread.wordInfo:
-            self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
-        else:
+        if not self.webCrawler_thread.wordInfo:
             translator = Translator()
-            translation = translator.translate(self.randomWord, src='en', dest='zh-tw').text
-            self.wordInfoLabel.setText(translation)
+            self.webCrawler_thread.wordInfo = translator.translate(self.randomWord, src='en', dest='zh-tw').text
+        self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
         # Sentence
         if self.webCrawler_thread.wordSentence:
              self.wordSentenceLabel.setText(self.webCrawler_thread.wordSentence)
@@ -117,17 +116,16 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         remove the selected words form recordList
         """
-        selectedItems = self.recordList.selectedItems()
-        if not selectedItems: return
-        for item in selectedItems:
-            print(item.text())
-            itemIndex = self.recordList.row(item)
+        selectedItem = self.recordList.currentItem()
+        if not selectedItem: return
+        else:
+            itemIndex = self.recordList.row(selectedItem)
             self.recordList.takeItem(itemIndex)
-
-            with open(self.filePath,'r',encoding='utf-8') as file:
-                fileContent = json.load(file)
+            file = open(self.filePath,'r',encoding='utf-8') 
+            self.file = open(self.filePath,'r',encoding='utf-8') 
+            fileContent = json.load(self.file)
             with open(self.filePath,'w',encoding='utf-8') as file:
-                if item.text() in fileContent[itemIndex].values():
+                if selectedItem.text() in fileContent[itemIndex].values():
                     del fileContent[itemIndex]
                 json.dump(fileContent,file,ensure_ascii=False)
             file.close()
@@ -139,6 +137,19 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.gTTS_thread = gTTS_Thread(self.randomWord)
         self.gTTS_thread.start()
 
+    def setRecord(self):
+        """
+        set label text to local record
+        """
+        with open(self.filePath,'r',encoding='utf-8') as file:
+            fileContent = json.load(file)
+            selectedItem = self.recordList.currentItem()
+            itemIndex = self.recordList.row(selectedItem)
+            self.wordLabel.setText(fileContent[itemIndex]['word'])
+            self.wordInfoLabel.setText(fileContent[itemIndex]['info'])
+            self.wordSentenceLabel.setText(fileContent[itemIndex]['sentences'])
+            file.close()
+
     def loadRecord(self):
         """
         load local record 
@@ -147,6 +158,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
             fileData = json.load(file)
             for index in range(len(fileData)):
                 self.recordList.addItem(fileData[index]['word'])
+            file.close()
 
     def addRecord(self): 
         """
@@ -165,8 +177,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
             json.dump(fileContent,file,ensure_ascii=False)
             file.close()
         
-
-  
 # ------------------------------------- Threading -------------------------------------
 class webCrawler(QThread):
     """
