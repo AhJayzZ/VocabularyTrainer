@@ -1,4 +1,3 @@
-from ntpath import join
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
@@ -84,7 +83,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.addButton.setEnabled(False)
         self.removeButton.setEnabled(False)
 
-
     def updateRandomWordInfo(self):
         """
         update wordInfoLabel and wordSentenceLabel
@@ -116,16 +114,14 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         remove the selected words form recordList
         """
-        selectedItem = self.recordList.currentItem()
-        itemIndex = self.recordList.row(selectedItem)
-        self.recordList.takeItem(itemIndex)
-        if not selectedItem: return
+        if not self.selectedItem: return
         else:
+            self.recordList.takeItem(self.itemIndex)
             with open(self.filePath,'r',encoding='utf-8') as file:
                 fileContent = json.load(file)
             with open(self.filePath,'w',encoding='utf-8') as file:
-                if selectedItem.text() in fileContent[itemIndex].values():
-                    del fileContent[itemIndex]
+                if self.selectedItem.text() in fileContent[self.itemIndex].values():
+                    del fileContent[self.itemIndex]
                 json.dump(fileContent,file,ensure_ascii=False)
             file.close()
 
@@ -142,11 +138,11 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         with open(self.filePath,'r',encoding='utf-8') as file:
             fileContent = json.load(file)
-            selectedItem = self.recordList.currentItem()
-            itemIndex = self.recordList.row(selectedItem)
-            self.wordLabel.setText(fileContent[itemIndex]['word'])
-            self.wordInfoLabel.setText(fileContent[itemIndex]['info'])
-            self.wordSentenceLabel.setText(fileContent[itemIndex]['sentences'])
+            self.selectedItem = self.recordList.currentItem()
+            self.itemIndex = self.recordList.row(self.selectedItem)
+            self.wordLabel.setText(fileContent[self.itemIndex]['word'])
+            self.wordInfoLabel.setText(fileContent[self.itemIndex]['info'])
+            self.wordSentenceLabel.setText(fileContent[self.itemIndex]['sentences'])
             file.close()
 
     def loadRecord(self):
@@ -154,9 +150,9 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         load local record 
         """
         with open(self.filePath,'r',encoding='utf-8') as file:
-            fileData = json.load(file)
-            for index in range(len(fileData)):
-                self.recordList.addItem(fileData[index]['word'])
+            fileContent = json.load(file)
+            for index in range(len(fileContent)):
+                self.recordList.addItem(fileContent[index]['word'])
             file.close()
 
     def addRecord(self): 
