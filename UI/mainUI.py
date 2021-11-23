@@ -117,13 +117,12 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         remove the selected words form recordList
         """
         selectedItem = self.recordList.currentItem()
+        itemIndex = self.recordList.row(selectedItem)
+        self.recordList.takeItem(itemIndex)
         if not selectedItem: return
         else:
-            itemIndex = self.recordList.row(selectedItem)
-            self.recordList.takeItem(itemIndex)
-            file = open(self.filePath,'r',encoding='utf-8') 
-            self.file = open(self.filePath,'r',encoding='utf-8') 
-            fileContent = json.load(self.file)
+            with open(self.filePath,'r',encoding='utf-8') as file:
+                fileContent = json.load(file)
             with open(self.filePath,'w',encoding='utf-8') as file:
                 if selectedItem.text() in fileContent[itemIndex].values():
                     del fileContent[itemIndex]
