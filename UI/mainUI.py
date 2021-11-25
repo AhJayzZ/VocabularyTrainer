@@ -75,13 +75,20 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         update wordLabel
         """
         self.randomWord = self.getRandomWord()
-        self.gTTS_thread = gTTS_Thread(self.randomWord)
-        self.gTTS_thread.start()
-        self.webCrawler_thread = webCrawler(self.randomWord)
-        self.webCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
-        self.webCrawler_thread.start()
         self.wordLabel.setText(self.randomWord)
 
+        self.gTTS_thread = gTTS_Thread(self.randomWord)
+        self.wordInfoCrawler_thread = wordInfoCrawler(self.randomWord)
+        self.wordSentenceCrawler_thread = wordSentenceCrawler(self.randomWord)
+        self.wordImageCrawler_thread = wordImageCrawler(self.randomWord)
+        self.wordInfoCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
+        self.wordSentenceCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
+        self.wordImageCrawler_thread.finishSingal.connect(self.updateRandomWordInfo)
+        self.wordImageCrawler_thread.start()
+        self.wordInfoCrawler_thread.start()
+        self.wordSentenceCrawler_thread.start()
+        self.gTTS_thread.start()
+        
         # Avoid too fast refresh
         self.generateButton.setEnabled(False)   
         self.addButton.setEnabled(False)
@@ -91,27 +98,32 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         update wordInfoLabel and wordSentenceLabel
         """
-        self.addButton.setEnabled(True)
-        self.removeButton.setEnabled(True)
-        self.generateButton.setEnabled(True)
-        self.generateButton.setDefault(True)
+        if (self.wordInfoCrawler_thread.isFinished() and 
+            self.wordSentenceCrawler_thread.isFinished() and 
+            self.wordImageCrawler_thread.isFinished()):
+                self.addButton.setEnabled(True)
+                self.removeButton.setEnabled(True)
+                self.generateButton.setEnabled(True)
+                self.generateButton.setDefault(True)
 
         # Word
-        if not self.webCrawler_thread.wordInfo:
-            translator = Translator()
-            self.webCrawler_thread.wordInfo = translator.translate(self.randomWord, src='en', dest='zh-tw').text
-        self.wordInfoLabel.setText(self.webCrawler_thread.wordInfo)
+        if self.wordInfoCrawler_thread.isFinished():
+            if not self.wordInfoCrawler_thread.wordInfo:
+                translator = Translator()
+                self.wordInfoCrawler_thread.wordInfo = translator.translate(self.randomWord, src='en', dest='zh-tw').text
+            self.wordInfoLabel.setText(self.wordInfoCrawler_thread.wordInfo)
         # Sentence
-        if self.webCrawler_thread.wordSentence:
-             self.wordSentenceLabel.setText(self.webCrawler_thread.wordSentence)
-        else:
-            self.webCrawler_thread.wordSentence = 'Found nothing sentence...'
-            self.wordSentenceLabel.setText('Found nothing sentence...')
+        if self.wordSentenceCrawler_thread.isFinished():
+            if not self.wordSentenceCrawler_thread.wordSentences:
+                self.wordSentenceCrawler_thread.wordSentences = 'Found nothing sentence...'
+            self.wordSentenceLabel.setText(self.wordSentenceCrawler_thread.wordSentences)
         # Image
-        if self.webCrawler_thread.image:
-            self.imageLabel.setPixmap(self.webCrawler_thread.image)
-        else:
-            self.imageLabel.setText('Found nothing image...')
+        if self.wordImageCrawler_thread.isFinished():
+            if self.wordImageCrawler_thread.image:
+                self.imageLabel.setPixmap(self.wordImageCrawler_thread.image)
+            else:
+                self.wordImageCrawler_thread.image = None
+                self.imageLabel.setText('Found nothing image...')
 
     def addRandomWord(self):
         """
@@ -153,6 +165,18 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
             self.wordLabel.setText(fileContent[self.itemIndex]['word'])
             self.wordInfoLabel.setText(fileContent[self.itemIndex]['info'])
             self.wordSentenceLabel.setText(fileContent[self.itemIndex]['sentences'])
+            if fileContent[self.itemIndex]['imageUrl']:
+                self.generateButton.setEnabled(False)   
+                self.addButton.setEnabled(False)
+                self.removeButton.setEnabled(False)
+                self.imageLabel.setPixmap(self.urlToPyqtImage(fileContent[self.itemIndex]['imageUrl']))
+            else:
+                self.imageLabel.setText('Found nothing image...')
+            self.addButton.setEnabled(True)
+            self.removeButton.setEnabled(True)
+            self.generateButton.setEnabled(True)
+            self.generateButton.setDefault(True)
+
             file.close()
 
     def loadRecord(self):
@@ -173,19 +197,32 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
             open(self.filePath,'w')
 
         wordDict = {"word":self.randomWord,
-                    "info":self.webCrawler_thread.wordInfo,
-                    "sentences":self.webCrawler_thread.wordSentence}
+                    "info":self.wordInfoCrawler_thread.wordInfo,
+                    "sentences":self.wordSentenceCrawler_thread.wordSentences,
+                    "imageUrl":self.wordImageCrawler_thread.imageUrl}
         with open(self.filePath,'r+',encoding='utf-8') as file:
             fileContent = json.load(file)
             fileContent.append(wordDict)
             file.seek(0)
             json.dump(fileContent,file,ensure_ascii=False)
             file.close()
+
+    def urlToPyqtImage(self,url):
+        imageContent = requests.get(url).content
+        image = numpy.array(bytearray(imageContent),dtype="uint8")
+        image = cv2.imdecode(image,cv2.IMREAD_COLOR)
+
+        #PyQt image format
+        height, width = image.shape[:2]
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        pyqt_img = QImage(image,width,height,QImage.Format_RGB888)
+        pyqt_img = QPixmap.fromImage(pyqt_img)
+        return pyqt_img 
         
 # ------------------------------------- Threading -------------------------------------
-class webCrawler(QThread):
+class wordInfoCrawler(QThread):
     """
-    web scraping thread
+    get word info crawler 
     """
     finishSingal = pyqtSignal(int)
     def __init__(self,word):
@@ -193,24 +230,11 @@ class webCrawler(QThread):
         self.word = word
         self.infoUrl = "https://www.bing.com/dict/search?q={}".format(word)
         self.infoUrlHeader = {'cookie':'_EDGE_S=F&mkt=zh-cn'} # this is key header
-        self.sentenceUrl = "http://www.iciba.com/word?w={}".format(word)
-        self.sentenceUrlHeader={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'}
-        self.imagesUrl = "https://unsplash.com/napi/search?query={}".format(word)
-    
+
     def run(self):
-        # Word
         self.infoHtmlContent = requests.get(url=self.infoUrl,headers=self.infoUrlHeader).text
         self.infoSoup = BeautifulSoup(self.infoHtmlContent,'html.parser')
-        # Sentence
-        self.sentenceHtmlContent = requests.get(url=self.sentenceUrl,headers=self.sentenceUrlHeader).text
-        self.sentenceSoup = BeautifulSoup(self.sentenceHtmlContent,'html.parser')
-        # Image
-        self.imageHtmlContent = requests.get(url=self.imagesUrl).text
-        self.imageSoup = BeautifulSoup(self.imageHtmlContent,'html.parser')
-
         self.wordInfo = self.getWordInfo()
-        self.wordSentence = self.getWordSentence()
-        self.image = self.getWordImage()
         self.finishSingal.emit(1)
     
     def getWordInfo(self):
@@ -223,7 +247,25 @@ class webCrawler(QThread):
                                                     definitions[index].text))
         return '\n'.join(wordInfoArray)
 
-    def getWordSentence(self):
+
+class wordSentenceCrawler(QThread):
+    """
+    get word sentences crawler
+    """
+    finishSingal = pyqtSignal(int)
+    def __init__(self,word):
+        super().__init__(parent=None)
+        self.word = word
+        self.sentenceUrl = "http://www.iciba.com/word?w={}".format(word)
+        self.sentenceUrlHeader={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'}
+
+    def run(self):
+        self.sentenceHtmlContent = requests.get(url=self.sentenceUrl,headers=self.sentenceUrlHeader).text
+        self.sentenceSoup = BeautifulSoup(self.sentenceHtmlContent,'html.parser')
+        self.wordSentences = self.getWordSentences()
+        self.finishSingal.emit(1)
+    
+    def getWordSentences(self):
         sentences = self.sentenceSoup.find_all('p',class_='NormalSentence_en__3Ey8P')
         chineseSentences = self.sentenceSoup.find_all('p',class_='NormalSentence_cn__27VpO')
         sentenceArray = []
@@ -235,7 +277,23 @@ class webCrawler(QThread):
                                                         chineseSentences[index].text))
             if index >= 5 : break # limit output sentence
         return '\n'.join(sentenceArray)
+
+class wordImageCrawler(QThread):
+    """
+    get word image crawler
+    """
+    finishSingal = pyqtSignal(int)
+    def __init__(self,word):
+        super().__init__(parent=None)
+        self.word = word
+        self.imagesUrl = "https://unsplash.com/napi/search?query={}".format(word)
     
+    def run(self):
+        self.imageHtmlContent = requests.get(url=self.imagesUrl).text
+        self.imageSoup = BeautifulSoup(self.imageHtmlContent,'html.parser')
+        self.image,self.imageUrl = self.getWordImage()
+        self.finishSingal.emit(1)
+
     def getWordImage(self):
         try:
             imageJson = json.loads(self.imageHtmlContent)
@@ -249,10 +307,9 @@ class webCrawler(QThread):
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
             pyqt_img = QImage(image,width,height,QImage.Format_RGB888)
             pyqt_img = QPixmap.fromImage(pyqt_img)
-            return pyqt_img 
+            return pyqt_img,imageUrl 
         except:
-            print('get word image failed!')
-            return None
+            return None,None
 
 class gTTS_Thread(QThread):
     """
