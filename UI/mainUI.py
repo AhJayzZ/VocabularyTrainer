@@ -1,12 +1,15 @@
 from PyQt5.QtWidgets import *
 from PyQt5.QtGui import *
 from PyQt5.QtCore import *
+from cv2 import imread
 
 from .Ui_init import *
 
 from bs4 import BeautifulSoup
 from googletrans import Translator
 import text_to_speech
+import cv2
+import numpy
 import requests
 import random
 import json
@@ -49,6 +52,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.exitButton.clicked.connect(sys.exit)
 
         self.recordList.itemSelectionChanged.connect(self.setRecord)
+        self.imageLabel.setScaledContents(True)
 
     def connectionCheck(self):
         """
@@ -91,6 +95,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         self.removeButton.setEnabled(True)
         self.generateButton.setEnabled(True)
         self.generateButton.setDefault(True)
+
         # Word
         if not self.webCrawler_thread.wordInfo:
             translator = Translator()
@@ -102,7 +107,12 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         else:
             self.webCrawler_thread.wordSentence = 'Found nothing sentence...'
             self.wordSentenceLabel.setText('Found nothing sentence...')
-        
+        # Image
+        if self.webCrawler_thread.image:
+            self.imageLabel.setPixmap(self.webCrawler_thread.image)
+        else:
+            self.imageLabel.setText('Found nothing image...')
+
     def addRandomWord(self):
         """
         add word to recordList
@@ -181,25 +191,31 @@ class webCrawler(QThread):
     def __init__(self,word):
         super().__init__(parent=None)
         self.word = word
-        self.url = "https://www.bing.com/dict/search?q={}".format(word)
-        self.header = {'cookie':'_EDGE_S=F&mkt=zh-cn'} # this is key header
+        self.infoUrl = "https://www.bing.com/dict/search?q={}".format(word)
+        self.infoUrlHeader = {'cookie':'_EDGE_S=F&mkt=zh-cn'} # this is key header
         self.sentenceUrl = "http://www.iciba.com/word?w={}".format(word)
-        self.sentenceUrlHeader={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36',}
+        self.sentenceUrlHeader={'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/95.0.4638.69 Safari/537.36'}
+        self.imagesUrl = "https://unsplash.com/napi/search?query={}".format(word)
     
     def run(self):
         # Word
-        self.htmlContent = requests.get(url=self.url,headers=self.header).text
-        self.soup = BeautifulSoup(self.htmlContent,'html.parser')
+        self.infoHtmlContent = requests.get(url=self.infoUrl,headers=self.infoUrlHeader).text
+        self.infoSoup = BeautifulSoup(self.infoHtmlContent,'html.parser')
         # Sentence
-        self.sentenceHtmlContent =requests.get(url=self.sentenceUrl,headers=self.sentenceUrlHeader).text
+        self.sentenceHtmlContent = requests.get(url=self.sentenceUrl,headers=self.sentenceUrlHeader).text
         self.sentenceSoup = BeautifulSoup(self.sentenceHtmlContent,'html.parser')
+        # Image
+        self.imageHtmlContent = requests.get(url=self.imagesUrl).text
+        self.imageSoup = BeautifulSoup(self.imageHtmlContent,'html.parser')
+
         self.wordInfo = self.getWordInfo()
         self.wordSentence = self.getWordSentence()
+        self.image = self.getWordImage()
         self.finishSingal.emit(1)
     
     def getWordInfo(self):
-        pos = self.soup.find_all('span',class_='pos')
-        definitions = self.soup.find_all('span',class_='def b_regtxt')
+        pos = self.infoSoup.find_all('span',class_='pos')
+        definitions = self.infoSoup.find_all('span',class_='def b_regtxt')
         wordInfoArray = []
         for index in range(max(len(pos),len(definitions))):
             wordInfoArray.append("{}.(詞性:{}) {}".format(str(index+1),
@@ -219,6 +235,24 @@ class webCrawler(QThread):
                                                         chineseSentences[index].text))
             if index >= 5 : break # limit output sentence
         return '\n'.join(sentenceArray)
+    
+    def getWordImage(self):
+        try:
+            imageJson = json.loads(self.imageHtmlContent)
+            imageUrl = imageJson['collections']['results'][0]['cover_photo']['urls']['regular']
+            imageContent = requests.get(imageUrl).content
+            image = numpy.array(bytearray(imageContent),dtype="uint8")
+            image = cv2.imdecode(image,cv2.IMREAD_COLOR)
+
+            #PyQt image format
+            height, width = image.shape[:2]
+            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            pyqt_img = QImage(image,width,height,QImage.Format_RGB888)
+            pyqt_img = QPixmap.fromImage(pyqt_img)
+            return pyqt_img 
+        except:
+            print('get word image failed!')
+            return None
 
 class gTTS_Thread(QThread):
     """
@@ -244,7 +278,7 @@ class connectCheck_Thread(QThread):
         try:
             requests.get(url=self.url,timeout=1)
             self.mainWindow.connectionLabel.setStyleSheet('color:blue')
-            self.mainWindow.connectionLabel.setText('網路連線狀態: 正常')
+            self.mainWindow.connectionLabel.setText('Connection: Success')
         except requests.exceptions.ConnectionError:
             self.mainWindow.connectionLabel.setStyleSheet('color:red')
-            self.mainWindow.connectionLabel.setText('網路連線狀態: 失敗')
+            self.mainWindow.connectionLabel.setText('Connection: Failed')
