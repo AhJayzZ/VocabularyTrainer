@@ -26,6 +26,11 @@
     - GUI設計:```PyQt5==5.15.6```
 ----------------------------------------
 ## 運作方式 Operation
+- ### 架構圖 Architecture
+    ![](https://i.imgur.com/njV4GVn.png)
+
+- ### 其他功能 Other Function
+    ![](https://i.imgur.com/KpmDrk9.png)
 
 ----------------------------------------
 ## 成果 Result
@@ -45,4 +50,3 @@
 
 - ### 點擊單字紀錄
     ![](https://i.imgur.com/nCwfGKc.png)
-
