@@ -25,11 +25,6 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         super(VocabularyTrainer,self).__init__()
 
-        # unfinished
-        self.currentPath = os.path.dirname(__file__) # GUI
-        self.dirPath = os.path.split(self.currentPath)[0] # ../ => project_code
-        self.filePath = os.path.join(self.dirPath,'localRecord.json')
-
         self.setupUi(self)
         self.getRandomWord()
         self.updateRandomWord()
@@ -139,9 +134,9 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         if not self.selectedItem: return
         else:
             self.recordList.takeItem(self.itemIndex)
-            with open(self.filePath,'r',encoding='utf-8') as file:
+            with open('localRecord.json','r',encoding='utf-8') as file:
                 fileContent = json.load(file)
-            with open(self.filePath,'w',encoding='utf-8') as file:
+            with open('localRecord.json','w',encoding='utf-8') as file:
                 if self.selectedItem.text() in fileContent[self.itemIndex].values():
                     del fileContent[self.itemIndex]
                 json.dump(fileContent,file,ensure_ascii=False)
@@ -158,7 +153,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         set label text to local record
         """
-        with open(self.filePath,'r',encoding='utf-8') as file:
+        with open('localRecord.json','r',encoding='utf-8') as file:
             fileContent = json.load(file)
             self.selectedItem = self.recordList.currentItem()
             self.itemIndex = self.recordList.row(self.selectedItem)
@@ -183,7 +178,7 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         load local record 
         """
-        with open(self.filePath,'r',encoding='utf-8') as file:
+        with open('localRecord.json','r',encoding='utf-8') as file:
             fileContent = json.load(file)
             for index in range(len(fileContent)):
                 self.recordList.addItem(fileContent[index]['word'])
@@ -193,14 +188,14 @@ class VocabularyTrainer(QMainWindow,Ui_MainWindow):
         """
         add word dictionary to local record
         """
-        if not os.path.exists(self.filePath):
-            open(self.filePath,'w')
+        if not os.path.exists('localRecord.json'):
+            open('localRecord.json','w')
 
         wordDict = {"word":self.randomWord,
                     "info":self.wordInfoCrawler_thread.wordInfo,
                     "sentences":self.wordSentenceCrawler_thread.wordSentences,
                     "imageUrl":self.wordImageCrawler_thread.imageUrl}
-        with open(self.filePath,'r+',encoding='utf-8') as file:
+        with open('localRecord.json','r+',encoding='utf-8') as file:
             fileContent = json.load(file)
             fileContent.append(wordDict)
             file.seek(0)
